@@ -1,0 +1,42 @@
+{
+  "name": "api.pluoro.com",
+  "version": "1.0.0",
+  "description": "api of the pluoro project",
+  "main": "app.js",
+  "pkg": {},
+  "scripts": {
+    "start": "nodemon app.js",
+    "build": "pkg app.js --target node14-linux-x64",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ivulovic/api.pluoro.com.git"
+  },
+  "keywords": [
+    "pluoro",
+    "api"
+  ],
+  "author": "Ivan Vulovic",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ivulovic/api.pluoro.com/issues"
+  },
+  "homepage": "https://github.com/ivulovic/api.pluoro.com#readme",
+  "devDependencies": {
+    "nodemon": "^2.0.4"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.19.0",
+    "cookie-parser": "^1.4.5",
+    "express": "^4.17.1",
+    "express-promise-router": "^4.0.1",
+    "ioredis": "^4.17.3",
+    "joi": "14.3.1",
+    "jsonwebtoken": "^8.5.1",
+    "mongoose": "^5.9.27",
+    "rate-limiter-flexible": "^2.1.10",
+    "redis": "^3.0.2"
+  }
+}

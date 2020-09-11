@@ -7,6 +7,10 @@ router
   .get(ContentController.appStructure)
 
 router
+  .route("/article")
+  .post(ContentController.getArticleContent)
+
+router
   .route("/sitemap.xml")
   .get(ContentController.getSitemap)
 

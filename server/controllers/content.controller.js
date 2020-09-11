@@ -14,7 +14,7 @@ const excludedArticleOptions = {
   __v: 0,
   createdBy: 0,
   page: 0,
-  // content: 0,
+  content: 0,
   public: 0,
 }
 const excludedArticleOptionsWithExcludedContent = {
@@ -34,6 +34,29 @@ const excludedPageOptions = {
 }
 
 module.exports = {
+  getArticleContent: async (req, res) => {
+
+    const app = await ApplicationModel.findOne({ name: req.hostname });
+
+    if (!app) {
+      res.status(403).send(Unauthorized);
+      return;
+    }
+
+    const article = await ArticleModel.findOne({ public: true, path: req.body.article }).populate("page");
+
+    if (article.page.path !== req.body.page) {
+      res.status(403).send(Unauthorized);
+    }
+
+    const pageInApp = PageModel.findOne({ public: true, application: app._id, path: req.body.page });
+
+    if (!pageInApp) {
+      res.status(403).send(Unauthorized);
+    }
+
+    res.status(200).send({ content: article.content })
+  },
   appStructure: async (req, res) => {
 
     const app = await ApplicationModel.findOne({ name: req.hostname });
@@ -94,7 +117,7 @@ module.exports = {
 
     const mainUrl = `https://${req.hostname}`;
 
-    const createSitemapObj = (path, tsDate, changefreq) => {
+    const createItem = (path, tsDate, changefreq) => {
       const result = { loc: `${mainUrl}${path}`, lastmod: new Date(tsDate).toLocaleDateString("sv") }
       if (changefreq) {
         result.changefreq = changefreq;
@@ -103,7 +126,7 @@ module.exports = {
     };
 
     const urls = [
-      createSitemapObj('', app.createdAt),
+      createItem('', app.createdAt),
     ];
 
     const applicationId = app._id;
@@ -119,23 +142,21 @@ module.exports = {
           if (arr[i].pages[j].articles.length) {
             for (let k = 0; k < arr[i].pages[j].articles.length; k++) {
               lastModOfTheSubpage = arr[i].pages[j].articles[k].createdAt
-              urls.push(createSitemapObj(arr[i].path + arr[i].pages[j].path + arr[i].pages[j].articles[k].path, arr[i].pages[j].articles[k].createdAt));
+              urls.push(createItem(arr[i].path + arr[i].pages[j].path + arr[i].pages[j].articles[k].path, arr[i].pages[j].articles[k].createdAt));
             }
           }
-          urls.push(createSitemapObj(arr[i].path + arr[i].pages[j].path, lastModOfTheSubpage, 'weekly'));
+          urls.push(createItem(arr[i].path + arr[i].pages[j].path, lastModOfTheSubpage, 'weekly'));
         }
       }
       arr[i].articles = await ArticleModel.find({ page: arr[i]._id, public: true }, excludedArticleOptionsWithExcludedContent);
       if (arr[i].articles.length) {
         for (let j = 0; j < arr[i].articles.length; j++) {
           lastModOfThePage = arr[i].articles[j].createdAt;
-          urls.push(createSitemapObj(arr[i].path + arr[i].articles[j].path, arr[i].articles[j].createdAt));
+          urls.push(createItem(arr[i].path + arr[i].articles[j].path, arr[i].articles[j].createdAt));
         }
       }
-      urls.push(createSitemapObj(arr[i].path, lastModOfThePage, 'weekly'));
+      urls.push(createItem(arr[i].path, lastModOfThePage));
     }
-
-    console.log(app, arr);
 
     var obj = {
       urlset: {
@@ -158,16 +179,15 @@ module.exports = {
       return;
     }
     const mainUrl = `https://${req.hostname}`;
-    const createSitemapObj = (path, tsDate, description) => {
+    const createItem = (path, tsDate, description) => {
       const result = { link: `${mainUrl}${path}`, pubDate: new Date(tsDate).toLocaleDateString("sv") }
       if (description) {
         result.description = description;
       }
       return result;
     };
-
     const urls = [
-      createSitemapObj('', app.createdAt),
+      createItem('', app.createdAt),
     ];
     const applicationId = app._id;
     const arr = await PageModel.find({ application: applicationId, parentPage: null, public: true }, excludedPageOptions);
@@ -182,20 +202,20 @@ module.exports = {
           if (arr[i].pages[j].articles.length) {
             for (let k = 0; k < arr[i].pages[j].articles.length; k++) {
               lastModOfTheSubpage = arr[i].pages[j].articles[k].createdAt
-              urls.push(createSitemapObj(arr[i].path + arr[i].pages[j].path + arr[i].pages[j].articles[k].path, arr[i].pages[j].articles[k].createdAt, arr[i].pages[j].articles[k].title, arr[i].pages[j].articles[k].description));
+              urls.push(createItem(arr[i].path + arr[i].pages[j].path + arr[i].pages[j].articles[k].path, arr[i].pages[j].articles[k].createdAt, arr[i].pages[j].articles[k].title, arr[i].pages[j].articles[k].description));
             }
           }
-          urls.push(createSitemapObj(arr[i].path + arr[i].pages[j].path, lastModOfTheSubpage, arr[i].pages[j].title, arr[i].pages[j].description));
+          urls.push(createItem(arr[i].path + arr[i].pages[j].path, lastModOfTheSubpage, arr[i].pages[j].title, arr[i].pages[j].description));
         }
       }
       arr[i].articles = await ArticleModel.find({ page: arr[i]._id, public: true }, excludedArticleOptionsWithExcludedContent);
       if (arr[i].articles.length) {
         for (let j = 0; j < arr[i].articles.length; j++) {
           lastModOfThePage = arr[i].articles[j].createdAt;
-          urls.push(createSitemapObj(arr[i].path + arr[i].articles[j].path, arr[i].articles[j].createdAt, arr[i].articles[j].title, arr[i].articles[j].description));
+          urls.push(createItem(arr[i].path + arr[i].articles[j].path, arr[i].articles[j].createdAt, arr[i].articles[j].title, arr[i].articles[j].description));
         }
       }
-      urls.push(createSitemapObj(arr[i].path, lastModOfThePage, arr[i].description));
+      urls.push(createItem(arr[i].path, lastModOfThePage, arr[i].description));
     }
     var obj = {
       rss: {
@@ -218,7 +238,6 @@ module.exports = {
     res.status(200).send(xml);
   },
 
-
   getAtom: async (req, res) => {
     const app = await ApplicationModel.findOne({ name: req.hostname });
     if (!app) {
@@ -226,7 +245,7 @@ module.exports = {
       return;
     }
     const mainUrl = `https://${req.hostname}`;
-    const createSitemapObj = (path, tsDate, title, summary) => {
+    const createItem = (path, tsDate, title, summary) => {
       const result = {};
       result.id = `${mainUrl}${path}`;
       result.link = { $: { href: `${mainUrl}${path}` } };
@@ -253,20 +272,20 @@ module.exports = {
           if (arr[i].pages[j].articles.length) {
             for (let k = 0; k < arr[i].pages[j].articles.length; k++) {
               lastModOfTheSubpage = arr[i].pages[j].articles[k].createdAt
-              urls.push(createSitemapObj(arr[i].path + arr[i].pages[j].path + arr[i].pages[j].articles[k].path, arr[i].pages[j].articles[k].createdAt, arr[i].pages[j].articles[k].title, arr[i].pages[j].articles[k].description));
+              urls.push(createItem(arr[i].path + arr[i].pages[j].path + arr[i].pages[j].articles[k].path, arr[i].pages[j].articles[k].createdAt, arr[i].pages[j].articles[k].title, arr[i].pages[j].articles[k].description));
             }
           }
-          urls.push(createSitemapObj(arr[i].path + arr[i].pages[j].path, lastModOfTheSubpage, arr[i].pages[j].title, arr[i].pages[j].description));
+          urls.push(createItem(arr[i].path + arr[i].pages[j].path, lastModOfTheSubpage, arr[i].pages[j].title, arr[i].pages[j].description));
         }
       }
       arr[i].articles = await ArticleModel.find({ page: arr[i]._id, public: true }, excludedArticleOptionsWithExcludedContent);
       if (arr[i].articles.length) {
         for (let j = 0; j < arr[i].articles.length; j++) {
           lastModOfThePage = arr[i].articles[j].createdAt;
-          urls.push(createSitemapObj(arr[i].path + arr[i].articles[j].path, arr[i].articles[j].createdAt, arr[i].articles[j].title, arr[i].articles[j].description));
+          urls.push(createItem(arr[i].path + arr[i].articles[j].path, arr[i].articles[j].createdAt, arr[i].articles[j].title, arr[i].articles[j].description));
         }
       }
-      urls.push(createSitemapObj(arr[i].path, lastModOfThePage, arr[i].title, arr[i].description));
+      urls.push(createItem(arr[i].path, lastModOfThePage, arr[i].title, arr[i].description));
     }
     var obj = {
       feed: {
